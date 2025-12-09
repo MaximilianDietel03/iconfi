@@ -20,7 +20,7 @@ export async function getReviewFlashcardsByTopic(
   const { data: cardWithContents, error } = await supabase
     .from("sr_card")
     .select(
-      `*, question ( *, options:option ( * ), examination ( topic_id ), learning_material_pages:learning_material_page ( id, key_concepts, number, title, description, learning_material_topic ( id, learning_material ( id, url ) ) ) )`,
+      `*, question ( *, options:option ( * ), examination ( topic_id ), learning_material_pages:learning_material_page ( id, key_concepts, number, title, description, learning_material_topic ( id, learning_material ( id, url ) ), learning_material_external_resources:learning_material_external_resource ( id, description, type, url ) ) )`,
     )
     .eq("user_id", user.id)
     .eq("question.examination.topic_id", topicId)
@@ -83,7 +83,7 @@ export async function getNewFlashcardsByTopic(
   // Step 2: Fetch all questions *not* in that list
   const { data: questionsWithContents, error: questionsWithContentsError } = await supabase
   .from("question")
-  .select(`*, options:option ( * ), examination ( topic_id ), learning_material_pages:learning_material_page ( id, key_concepts, number, title, description, learning_material_topic ( id, learning_material ( id, url ) ) )`)
+  .select(`*, options:option ( * ), examination ( topic_id ), learning_material_pages:learning_material_page ( id, key_concepts, number, title, description, learning_material_topic ( id, learning_material ( id, url ) ), learning_material_external_resources:learning_material_external_resource ( id, description, type, url ) )`)
   .not("id", "in", `(${existingIds.join(",")})`)
   .eq("examination.topic_id", topicId)
   .limit(limit);
