@@ -9,6 +9,7 @@ import { MultipleChoiceQuestionCard } from "@/components/question-card/multiple-
 import { OrderQuestionCard } from "@/components/question-card/order-question-card";
 import { MatchQuestionCard } from "@/components/question-card/match-question-card";
 import { RelatedPagesCard } from "./related-pages-card";
+import { NotesEditor } from "./notes-editor";
 import { useFlashcards } from "./hooks";
 
 export const Pool: FC = () => {
@@ -38,6 +39,7 @@ export const Pool: FC = () => {
           }
         })()}
       </div>
+      {currentFlashcard && <NotesEditor />}
       {currentFlashcard?.question.learning_material_pages && (
         <RelatedPagesCard pages={currentFlashcard.question.learning_material_pages} />
       )}

@@ -352,6 +352,7 @@ export type Database = {
           lapses: number
           last_review: string | null
           learning_steps: number
+          notes: string | null
           question_id: string
           reps: number
           scheduled_days: number
@@ -368,6 +369,7 @@ export type Database = {
           lapses: number
           last_review?: string | null
           learning_steps: number
+          notes?: string | null
           question_id: string
           reps: number
           scheduled_days: number
@@ -384,6 +386,7 @@ export type Database = {
           lapses?: number
           last_review?: string | null
           learning_steps?: number
+          notes?: string | null
           question_id?: string
           reps?: number
           scheduled_days?: number

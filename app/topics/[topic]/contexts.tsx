@@ -71,10 +71,12 @@ export const FlashcardsContext = createContext<{
   flashcardsData: TopicFlashcardsData;
   currentFlashcard: Flashcard | null;
   gradeFlashcard: (flashcard: Flashcard, grade: Grade) => void;
+  updateNotes: (flashcard: Flashcard, notes: string) => Promise<void>;
 }>({
   flashcardsData: { cards: { new: [], review: [] }, stats: { total: 0, new: 0, learning: 0, review: 0 } },
   currentFlashcard: null,
   gradeFlashcard: () => {},
+  updateNotes: async () => {},
 });
 
 interface FlashcardsDataProviderProps {
@@ -135,8 +137,51 @@ export const FlashcardsDataProvider: FC<FlashcardsDataProviderProps> = ({ childr
     setFlashcardsData(newFlashcardsData);
   }
 
+  async function updateNotes(flashcard: Flashcard, notes: string) {
+    // Check if card exists in database (has an id)
+    if (!flashcard.id) {
+      console.log("Haven't implemented that logic yet");
+      return;
+    }
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const { error } = await supabase
+      .from("sr_card")
+      .update({ notes })
+      .eq("id", flashcard.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Update the flashcard in local state
+    setFlashcardsData((prevData) => {
+      const updateCard = (card: Flashcard): Flashcard => {
+        if (card.id === flashcard.id) {
+          return { ...card, notes };
+        }
+        return card;
+      };
+
+      return {
+        ...prevData,
+        cards: {
+          new: prevData.cards.new.map(updateCard),
+          review: prevData.cards.review.map(updateCard),
+        },
+      };
+    });
+  }
+
   return (
-    <FlashcardsContext.Provider value={{ flashcardsData, currentFlashcard, gradeFlashcard }}>
+    <FlashcardsContext.Provider value={{ flashcardsData, currentFlashcard, gradeFlashcard, updateNotes }}>
       {children}
     </FlashcardsContext.Provider>
   );

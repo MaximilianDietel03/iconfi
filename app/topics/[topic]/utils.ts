@@ -37,6 +37,7 @@ export async function getReviewFlashcardsByTopic(
   // Convert date strings to Date objects
   const reviewFlashcards = cardWithContents?.map((card) => ({
     ...card,
+    notes: card.notes || null,
     due: new Date(card.due),
     last_review: card.last_review ? new Date(card.last_review) : undefined,
   }));
