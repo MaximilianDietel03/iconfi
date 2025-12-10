@@ -1,8 +1,8 @@
-# iCoFi
+# iConFi
 
 **Bestehe deine TK-Prüfung mit System.**
 
-iCoFi is a modern flashcard application designed to help you prepare for your TK-Prüfung (German exam) using spaced repetition and an intuitive study interface.
+iConFi is a modern flashcard application designed to help you prepare for your TK-Prüfung (German exam) using spaced repetition and an intuitive study interface.
 
 ## Features
 
@@ -43,7 +43,7 @@ iCoFi is a modern flashcard application designed to help you prepare for your TK
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd icofi
+cd iConFi
 ```
 
 2. Install dependencies:
@@ -68,7 +68,7 @@ npm run dev
 ## Project Structure
 
 ```
-icofi/
+iConFi/
 ├── app/                    # Next.js app directory
 │   ├── auth/              # Authentication pages
 │   ├── topics/            # Topics and flashcards pages

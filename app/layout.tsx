@@ -9,7 +9,7 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "iCoFi",
+  title: "iConFi",
   description: "Bestehe deine TK-Prüfung mit System.",
 };
 
