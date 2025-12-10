@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "iConFi",
   description: "Bestehe deine TK-Prüfung mit System.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    images: ["/logo.png"],
+  },
 };
 
 const geistSans = Geist({
