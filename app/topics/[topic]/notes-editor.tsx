@@ -40,11 +40,11 @@ export function NotesEditor() {
 
   return (
     <div className="mt-4 flex flex-col gap-2">
-      <label className="text-sm font-semibold">Notes</label>
+      <label className="text-sm font-semibold">Notizen</label>
       <Textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Add your personal notes here..."
+        placeholder="Füge hier deine persönlichen Notizen hinzu..."
         rows={4}
       />
       <Button
@@ -53,7 +53,7 @@ export function NotesEditor() {
         variant="outline"
         className="self-start"
       >
-        {isSaving ? "Saving..." : "Save Notes"}
+        {isSaving ? "Wird gespeichert..." : "Notizen speichern"}
       </Button>
     </div>
   );

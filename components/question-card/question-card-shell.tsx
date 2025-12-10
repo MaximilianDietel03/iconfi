@@ -34,10 +34,10 @@ export function QuestionCardShell({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-lg mb-2">
-              Question {question.code}
+              Frage {question.code}
             </CardTitle>
             <CardDescription className="mb-2">
-              Type: {question.question_type} | Topic: {question.topic}
+              Typ: {question.question_type} | Thema: {question.topic}
             </CardDescription>
           </div>
         </div>

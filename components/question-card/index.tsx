@@ -33,7 +33,7 @@ export function QuestionCard({ question, options, onRate }: QuestionCardProps) {
       return (
         <QuestionCardShell question={question} isCorrect={null}>
           <div className="text-sm text-muted-foreground">
-            Unsupported question type.
+            Nicht unterstützter Fragetyp.
           </div>
         </QuestionCardShell>
       );

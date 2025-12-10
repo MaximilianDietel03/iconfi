@@ -148,7 +148,7 @@ export function OrderQuestionCard({ question, options, onRate }: OrderQuestionCa
   return (
     <QuestionCardShell question={question} isCorrect={isCorrect}>
       <div className="mt-4 flex flex-col gap-2">
-        <div className="text-sm font-semibold">Options:</div>
+        <div className="text-sm font-semibold">Optionen:</div>
         {mounted ? (
           <DndContext
             sensors={sensors}
@@ -207,7 +207,7 @@ export function OrderQuestionCard({ question, options, onRate }: OrderQuestionCa
         )}
         {!showResults ? (
           <Button onClick={() => setShowResults(true)} className="mt-4" variant="outline">
-            Correct Questions
+            Antworten prüfen
           </Button>
         ) : isCorrect ? (
           <div className="mt-4 flex gap-2">
@@ -217,7 +217,7 @@ export function OrderQuestionCard({ question, options, onRate }: OrderQuestionCa
                 variant="outline"
                 onClick={() => onRate?.(grade)}
               >
-                {grade === 2 ? "Hard" : grade === 3 ? "Good" : "Easy"}
+                {grade === 2 ? "Schwer" : grade === 3 ? "Gut" : "Einfach"}
               </Button>
             ))}
           </div>
@@ -227,7 +227,7 @@ export function OrderQuestionCard({ question, options, onRate }: OrderQuestionCa
             className="mt-4"
             variant="outline"
           >
-            Next question
+            Nächste Frage
           </Button>
         )}
       </div>

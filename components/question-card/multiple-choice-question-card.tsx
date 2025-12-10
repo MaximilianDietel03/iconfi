@@ -52,7 +52,7 @@ export function MultipleChoiceQuestionCard({
   return (
     <QuestionCardShell question={question} isCorrect={isCorrect}>
       <div className="mt-4 flex flex-col gap-2">
-        <div className="text-sm font-semibold">Options:</div>
+        <div className="text-sm font-semibold">Optionen:</div>
         <div className="flex flex-col gap-2">
           {options.map((option) => {
             const isSelected = selectedValues.includes(option.id);
@@ -92,7 +92,7 @@ export function MultipleChoiceQuestionCard({
         </div>
         {!showResults ? (
           <Button onClick={() => setShowResults(true)} className="mt-4" variant="outline">
-            Correct Questions
+            Antworten prüfen
           </Button>
         ) : isCorrect ? (
           <div className="mt-4 flex gap-2">
@@ -102,7 +102,7 @@ export function MultipleChoiceQuestionCard({
                 variant="outline"
                 onClick={() => onRate?.(grade)}
               >
-                {grade === 2 ? "Hard" : grade === 3 ? "Good" : "Easy"}
+                {grade === 2 ? "Schwer" : grade === 3 ? "Gut" : "Einfach"}
               </Button>
             ))}
           </div>
@@ -112,7 +112,7 @@ export function MultipleChoiceQuestionCard({
             className="mt-4"
             variant="outline"
           >
-            Next question
+            Nächste Frage
           </Button>
         )}
       </div>

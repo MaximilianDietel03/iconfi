@@ -40,7 +40,7 @@ export function SingleChoiceQuestionCard({
   return (
     <QuestionCardShell question={question} isCorrect={isCorrect}>
       <div className="mt-4 flex flex-col gap-2">
-        <div className="text-sm font-semibold">Options:</div>
+        <div className="text-sm font-semibold">Optionen:</div>
         <RadioGroup
           value={selectedValue}
           onValueChange={setSelectedValue}
@@ -78,7 +78,7 @@ export function SingleChoiceQuestionCard({
         </RadioGroup>
         {!showResults ? (
           <Button onClick={() => setShowResults(true)} className="mt-4" variant="outline">
-            Correct Questions
+            Antworten prüfen
           </Button>
         ) : isCorrect ? (
           <div className="mt-4 flex gap-2">
@@ -88,7 +88,7 @@ export function SingleChoiceQuestionCard({
                 variant="outline"
                 onClick={() => onRate?.(grade)}
               >
-                {grade === 2 ? "Hard" : grade === 3 ? "Good" : "Easy"}
+                {grade === 2 ? "Schwer" : grade === 3 ? "Gut" : "Einfach"}
               </Button>
             ))}
           </div>
@@ -98,7 +98,7 @@ export function SingleChoiceQuestionCard({
             className="mt-4"
             variant="outline"
           >
-            Next question
+            Nächste Frage
           </Button>
         )}
       </div>

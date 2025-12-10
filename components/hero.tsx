@@ -4,7 +4,7 @@ export function Hero() {
       <div className="flex gap-8 justify-center items-center">
         <h1 className="font-bold text-3xl mb-2">iConFi</h1>
       </div>
-      <h1 className="sr-only">Supabase and Next.js Starter Template</h1>
+      <h1 className="sr-only">iConFi</h1>
       <p className="text-3xl lg:text-4xl !leading-tight mx-auto max-w-xl text-center">
         Bestehe deine TK-Prüfung <br />mit System.
       </p>
