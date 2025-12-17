@@ -1,109 +1,83 @@
-"use client";
-
-import { useEffect, useState } from "react";
-
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import { QuestionCardShell } from "./question-card-shell";
-import { Question, Option } from "@/lib/supabase/types";
-import { Grade } from "ts-fsrs";
+import { Flashcard } from "@/app/topics/[topic]/types";
+
+import { QuestionCardState } from "./types";
 
 type SingleChoiceQuestionCardProps = {
-  question: Question;
-  options: Option[];
-  onRate?: (rating: Grade) => void;
+  flashcard: Flashcard;
+  side: "front" | "back";
+  onStateChange?: (state: QuestionCardState) => void;
 };
 
 export function SingleChoiceQuestionCard({
-  question,
-  options,
-  onRate,
+  flashcard,
+  side,
+  onStateChange,
 }: SingleChoiceQuestionCardProps) {
-  const [selectedValue, setSelectedValue] = useState<string>("");
-  const [showResults, setShowResults] = useState(false);
+  const { question } = flashcard;
+  const { options } = question;
 
+  const [selectedOptionId, setSelectedOptionId] = useState<string | undefined>(undefined);
+  const isBack = side === "back";
+  const correctOptionId = options.find((opt) => opt.is_correct === true)?.id;
+
+  // Reset selection when card changes
   useEffect(() => {
-    setSelectedValue("");
-    setShowResults(false);
-  }, [question]);
+    setSelectedOptionId(undefined);
+  }, [flashcard.question.id]);
 
-  const isCorrect = showResults
-    ? (() => {
-        if (!selectedValue) return false;
-        const selectedOption = options.find((opt) => opt.id === selectedValue);
-        return selectedOption?.is_correct === true;
-      })()
-    : null;
+  // Report state changes (selection and correctness)
+  useEffect(() => {
+    const hasSelection = selectedOptionId !== undefined;
+    const isAnswerCorrect = isBack && hasSelection
+      ? selectedOptionId === correctOptionId
+      : null;
+    
+    onStateChange?.({ hasSelection, isAnswerCorrect });
+  }, [isBack, selectedOptionId, correctOptionId, onStateChange]);
 
   return (
-    <QuestionCardShell question={question} isCorrect={isCorrect}>
-      <div className="mt-4 flex flex-col gap-2">
-        <div className="text-sm font-semibold">Optionen:</div>
-        <RadioGroup
-          value={selectedValue}
-          onValueChange={setSelectedValue}
-          className="flex flex-col gap-2"
-          disabled={showResults}
-        >
-          {options.map((option) => {
-            const isSelected = selectedValue === option.id;
-            const isOptionCorrect = option.is_correct === true;
+    <QuestionCardShell flashcard={flashcard}>
+      <RadioGroup 
+        value={selectedOptionId} 
+        onValueChange={(value) => setSelectedOptionId(value)}
+        className="flex flex-col gap-2" 
+        disabled={isBack}
+      >
+        {options.map((option) => {
+          const isCorrect = option.is_correct === true;
+          const isSelected = selectedOptionId === option.id;
 
-            let borderClass = "";
-            if (showResults) {
-              if (isSelected && isOptionCorrect) {
-                borderClass = "border-green-500 dark:border-green-400";
-              } else if (!isSelected && isOptionCorrect) {
-                borderClass = "border-green-500 dark:border-green-400 border-dashed";
-              } else if (isSelected && !isOptionCorrect) {
-                borderClass = "border-red-500 dark:border-red-400";
-              }
-            } else {
-              borderClass = isSelected ? "border-white" : "";
+          let borderClass = "";
+          if (isBack) {
+            if (isSelected && isCorrect) {
+              // User selected it and it's correct - green solid border
+              borderClass = "border-green-500 dark:border-green-400";
+            } else if (!isSelected && isCorrect) {
+              // User didn't select it but it's correct - green dashed border (missed answer)
+              borderClass = "border-green-500 dark:border-green-400 border-dashed";
+            } else if (isSelected && !isCorrect) {
+              // User selected it but it's wrong - red border
+              borderClass = "border-red-500 dark:border-red-400";
             }
+          }
 
-            return (
-              <Label
-                key={option.id}
-                htmlFor={option.id}
-                className={`flex items-center justify-center gap-3 p-3 rounded border bg-muted/50 hover:bg-muted transition-colors cursor-pointer ${borderClass}`}
-              >
-                <RadioGroupItem value={option.id} id={option.id} disabled={showResults} />
-                <span className="flex-1">{option.text}</span>
-              </Label>
-            );
-          })}
-        </RadioGroup>
-        {!showResults ? (
-          <Button onClick={() => setShowResults(true)} className="mt-4" variant="outline">
-            Antworten prüfen
-          </Button>
-        ) : isCorrect ? (
-          <div className="mt-4 flex gap-2">
-            {[2,3,4].map((grade) => (
-              <Button
-                key={grade}
-                variant="outline"
-                onClick={() => onRate?.(grade)}
-              >
-                {grade === 2 ? "Schwer" : grade === 3 ? "Gut" : "Einfach"}
-              </Button>
-            ))}
-          </div>
-        ) : (
-          <Button
-            onClick={() => onRate?.(1)}
-            className="mt-4"
-            variant="outline"
-          >
-            Nächste Frage
-          </Button>
-        )}
-      </div>
+          return (
+            <Label
+              key={option.id}
+              htmlFor={option.id}
+              className={`flex items-center justify-center gap-3 p-3 rounded border bg-muted/50 hover:bg-muted transition-colors cursor-pointer ${borderClass}`}
+            >
+              <RadioGroupItem value={option.id} id={option.id} disabled={isBack} />
+              <span className="flex-1 font-normal">{option.text}</span>
+            </Label>
+          );
+        })}
+      </RadioGroup>
     </QuestionCardShell>
   );
 }
-
-

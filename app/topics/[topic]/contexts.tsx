@@ -70,12 +70,12 @@ function getNextCard(data: TopicFlashcardsData): Flashcard | null {
 export const FlashcardsContext = createContext<{
   flashcardsData: TopicFlashcardsData;
   currentFlashcard: Flashcard | null;
-  gradeFlashcard: (flashcard: Flashcard, grade: Grade) => void;
+  gradeFlashcard: (flashcard: Flashcard, grade: Grade) => Promise<void>;
   updateNotes: (flashcard: Flashcard, notes: string) => Promise<void>;
 }>({
   flashcardsData: { cards: { new: [], review: [] }, stats: { total: 0, new: 0, learning: 0, review: 0 } },
   currentFlashcard: null,
-  gradeFlashcard: () => {},
+  gradeFlashcard: async () => {},
   updateNotes: async () => {},
 });
 
@@ -181,7 +181,12 @@ export const FlashcardsDataProvider: FC<FlashcardsDataProviderProps> = ({ childr
   }
 
   return (
-    <FlashcardsContext.Provider value={{ flashcardsData, currentFlashcard, gradeFlashcard, updateNotes }}>
+    <FlashcardsContext.Provider value={{ 
+      flashcardsData, 
+      currentFlashcard, 
+      gradeFlashcard, 
+      updateNotes
+    }}>
       {children}
     </FlashcardsContext.Provider>
   );

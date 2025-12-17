@@ -7,31 +7,43 @@ import { QuestionCardProps } from "./types";
 
 export type { QuestionCardProps };
 
-export function QuestionCard({ question, options, onRate }: QuestionCardProps) {
-  switch (question.question_type) {
+export function QuestionCard({ flashcard, side, onStateChange }: QuestionCardProps) {
+  switch (flashcard.question.question_type) {
     case "single":
       return (
         <SingleChoiceQuestionCard
-          question={question}
-          options={options}
-          onRate={onRate}
+          flashcard={flashcard}
+          side={side}
+          onStateChange={onStateChange}
         />
       );
     case "multiple":
       return (
         <MultipleChoiceQuestionCard
-          question={question}
-          options={options}
-          onRate={onRate}
+          flashcard={flashcard}
+          side={side}
+          onStateChange={onStateChange}
         />
       );
     case "order":
-      return <OrderQuestionCard question={question} options={options} onRate={onRate} />;
+      return (
+        <OrderQuestionCard 
+          flashcard={flashcard} 
+          side={side}
+          onStateChange={onStateChange}
+        />
+      );
     case "match":
-      return <MatchQuestionCard question={question} options={options} onRate={onRate} />;
+      return (
+        <MatchQuestionCard 
+          flashcard={flashcard} 
+          side={side}
+          onStateChange={onStateChange}
+        />
+      );
     default:
       return (
-        <QuestionCardShell question={question} isCorrect={null}>
+        <QuestionCardShell flashcard={flashcard}>
           <div className="text-sm text-muted-foreground">
             Nicht unterstützter Fragetyp.
           </div>

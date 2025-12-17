@@ -1,48 +1,59 @@
-"use client";
-
-import { useCallback, useEffect, useMemo, useState } from "react";
-
+import { useState, useEffect, useCallback } from "react";
+import { GripVertical } from "lucide-react";
 import {
   DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
+  closestCenter,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Grade } from "ts-fsrs";
 
 import { QuestionCardShell } from "./question-card-shell";
-import { Option, Question } from "@/lib/supabase/types";
+import { Flashcard } from "@/app/topics/[topic]/types";
+import { QuestionCardState } from "./types";
 
 type OrderQuestionCardProps = {
-  question: Question;
-  options: Option[];
-  onRate?: (rating: Grade) => void;
+  flashcard: Flashcard;
+  side: "front" | "back";
+  onStateChange?: (state: QuestionCardState) => void;
 };
 
 type SortableOptionItemProps = {
-  option: Option;
+  option: { id: string; text: string; correct_order_index?: number | null };
   index: number;
-  showResults: boolean;
+  isBack: boolean;
+  disabled?: boolean;
 };
 
-function SortableOptionItem({ option, index, showResults }: SortableOptionItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: option.id });
+function SortableOptionItem({
+  option,
+  index,
+  isBack,
+  disabled = false,
+}: SortableOptionItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: option.id,
+    disabled: disabled || isBack,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -51,30 +62,27 @@ function SortableOptionItem({ option, index, showResults }: SortableOptionItemPr
   };
 
   const correctIndex = option.correct_order_index ?? 0;
-  const isAtCorrectPosition = showResults && index === correctIndex;
-  const isAtWrongPosition = showResults && index !== correctIndex;
-
-  const borderClass = showResults
-    ? isAtCorrectPosition
-      ? "border-green-500 dark:border-green-400"
-      : isAtWrongPosition
-      ? "border-red-500 dark:border-red-400"
-      : ""
+  // Check if this option is in the correct position based on user's order
+  const isInCorrectPosition = isBack && correctIndex === index;
+  const borderClass = isBack && isInCorrectPosition
+    ? "border-green-500 dark:border-green-400"
+    : isBack && !isInCorrectPosition
+    ? "border-red-500 dark:border-red-400"
     : "";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className={`flex items-center justify-center gap-3 p-3 rounded border bg-muted/50 hover:bg-muted transition-colors cursor-grab active:cursor-grabbing touch-none ${
         isDragging ? "shadow-lg z-50" : ""
       } ${borderClass}`}
+      {...attributes}
+      {...listeners}
     >
       <GripVertical className="h-5 w-5 text-muted-foreground" />
       <span className="flex-1">{option.text}</span>
-      {showResults && (
+      {isBack && (
         <span className="text-sm font-semibold text-muted-foreground w-6 text-right">
           {correctIndex + 1}
         </span>
@@ -83,156 +91,118 @@ function SortableOptionItem({ option, index, showResults }: SortableOptionItemPr
   );
 }
 
-export function OrderQuestionCard({ question, options, onRate }: OrderQuestionCardProps) {
-  const initialOrderedOptions = useMemo(
-    () =>
-      [...options].sort((a, b) => {
-        const aIndex = a.correct_order_index ?? 0;
-        const bIndex = b.correct_order_index ?? 0;
-        return aIndex - bIndex;
-      }),
-    [options],
-  );
+export function OrderQuestionCard({
+  flashcard,
+  side,
+  onStateChange,
+}: OrderQuestionCardProps) {
+  const { question } = flashcard;
+  const { options } = question;
 
-  const [orderedOptions, setOrderedOptions] = useState<Option[]>(initialOrderedOptions);
-  const [showResults, setShowResults] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [orderedOptionIds, setOrderedOptionIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const isBack = side === "back";
 
+  // Initialize orderedOptionIds with all option IDs in original order when component mounts or card changes
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setOrderedOptionIds(options.map(opt => opt.id));
+  }, [flashcard.question.id, options]);
 
+  // Report state changes (selection and correctness)
   useEffect(() => {
-    setOrderedOptions(initialOrderedOptions);
-    setShowResults(false);
-    setActiveId(null);
-  }, [initialOrderedOptions, question.id]);
+    const hasSelection = orderedOptionIds.length === options.length;
 
+    let isAnswerCorrect: boolean | null = null;
+    if (isBack && hasSelection) {
+      // Check if the order matches the correct order
+      isAnswerCorrect = orderedOptionIds.every((optionId, index) => {
+        const option = options.find(opt => opt.id === optionId);
+        return option && (option.correct_order_index ?? -1) === index;
+      });
+    }
+
+    onStateChange?.({ hasSelection, isAnswerCorrect });
+  }, [isBack, orderedOptionIds, options, onStateChange]);
+
+  // Configure sensors for drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 5,
       },
     }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
+  // Handle drag start event
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  }, []);
+    if (!isBack) {
+      setActiveId(event.active.id as string);
+    }
+  }, [isBack]);
 
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      setActiveId(null);
+  // Handle drag end event
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
 
-      if (over && active.id !== over.id) {
-        setOrderedOptions((items) => {
-          const oldIndex = items.findIndex((item) => item.id === active.id);
-          const newIndex = items.findIndex((item) => item.id === over.id);
-          return arrayMove(items, oldIndex, newIndex);
-        });
-      }
-    },
-    [],
-  );
+    if (over && active.id !== over.id && !isBack) {
+      setOrderedOptionIds((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }, [isBack]);
 
-  const isCorrect = showResults
-    ? orderedOptions.every((option, index) => {
-        const correctIndex = option.correct_order_index ?? 0;
-        return index === correctIndex;
-      })
-    : null;
+  // Always show user's ordered selection, even on back side
+  // On back side, we'll add visual indicators for correctness
+  const displayedOptions = orderedOptionIds
+    .map((id) => options.find((opt) => opt.id === id))
+    .filter(Boolean) as typeof options;
 
   return (
-    <QuestionCardShell question={question} isCorrect={isCorrect}>
-      <div className="mt-4 flex flex-col gap-2">
-        <div className="text-sm font-semibold">Optionen:</div>
-        {mounted ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={orderedOptions.map((opt) => opt.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-2">
-                {orderedOptions.map((option, index) => (
-                  <SortableOptionItem
-                    key={option.id}
-                    option={option}
-                    index={index}
-                    showResults={showResults}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-            <DragOverlay>
-              {activeId ? (
-                <div className="flex items-center justify-center gap-3 p-3 rounded border bg-muted/50 shadow-lg opacity-90">
-                  <GripVertical className="h-5 w-5 text-muted-foreground" />
-                  <span className="flex-1">
-                    {orderedOptions.find((opt) => opt.id === activeId)?.text}
-                  </span>
-                  {showResults && (
-                    <span className="text-sm font-semibold text-muted-foreground w-6 text-right">
-                      {(orderedOptions.find((opt) => opt.id === activeId)?.correct_order_index ?? 0) + 1}
-                    </span>
-                  )}
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        ) : (
+    <QuestionCardShell flashcard={flashcard}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={orderedOptionIds}
+          strategy={verticalListSortingStrategy}
+        >
           <div className="flex flex-col gap-2">
-            {orderedOptions.map((option) => (
-              <div
+            {displayedOptions.map((option, index) => (
+              <SortableOptionItem
                 key={option.id}
-                className="flex items-center justify-center gap-3 p-3 rounded border bg-muted/50"
-              >
-                <GripVertical className="h-5 w-5 text-muted-foreground" />
-                <span className="flex-1">{option.text}</span>
-                {showResults && (
-                  <span className="text-sm font-semibold text-muted-foreground w-6 text-right">
-                    {(option.correct_order_index ?? 0) + 1}
-                  </span>
-                )}
-              </div>
+                option={option}
+                index={index}
+                isBack={isBack}
+                disabled={isBack}
+              />
             ))}
           </div>
-        )}
-        {!showResults ? (
-          <Button onClick={() => setShowResults(true)} className="mt-4" variant="outline">
-            Antworten prüfen
-          </Button>
-        ) : isCorrect ? (
-          <div className="mt-4 flex gap-2">
-            {([2, 3, 4] as Grade[]).map((grade) => (
-              <Button
-                key={grade}
-                variant="outline"
-                onClick={() => onRate?.(grade)}
-              >
-                {grade === 2 ? "Schwer" : grade === 3 ? "Gut" : "Einfach"}
-              </Button>
-            ))}
-          </div>
-        ) : (
-          <Button
-            onClick={() => onRate?.(1 as Grade)}
-            className="mt-4"
-            variant="outline"
-          >
-            Nächste Frage
-          </Button>
-        )}
-      </div>
+        </SortableContext>
+        <DragOverlay>
+          {activeId ? (
+            <div className="flex items-center justify-center gap-3 p-3 rounded border bg-muted/50 shadow-lg opacity-90">
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+              <span className="flex-1">
+                {displayedOptions.find((opt) => opt.id === activeId)?.text}
+              </span>
+              {isBack && (
+                <span className="text-sm font-semibold text-muted-foreground w-6 text-right">
+                  {(displayedOptions.find((opt) => opt.id === activeId)?.correct_order_index ?? 0) + 1}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </QuestionCardShell>
   );
 }
-
-

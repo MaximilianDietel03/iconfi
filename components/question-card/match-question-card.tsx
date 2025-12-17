@@ -1,7 +1,5 @@
-"use client";
-
-import { useCallback, useEffect, useMemo, useState } from "react";
-
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { GripVertical } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -15,37 +13,33 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { GripVertical } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Grade } from "ts-fsrs";
 
 import { QuestionCardShell } from "./question-card-shell";
-import { Option, Question } from "@/lib/supabase/types";
+import { Flashcard } from "@/app/topics/[topic]/types";
+import { QuestionCardState } from "./types";
 
 type MatchQuestionCardProps = {
-  question: Question;
-  options: Option[];
-  onRate?: (rating: Grade) => void;
-};
-
-type MatchPairProps = {
-  leftOption: Option;
-  rightOptions: Option[];
-  matchedPairs: Record<string, string>;
-  showResults: boolean;
-  leftOptions: Option[];
+  flashcard: Flashcard;
+  side: "front" | "back";
+  onStateChange?: (state: QuestionCardState) => void;
 };
 
 type DraggableRightItemProps = {
-  option: Option;
-  showResults: boolean;
-  leftOptions: Option[];
+  option: { id: string; text: string; correct_match_id?: string | null };
+  isBack: boolean;
+  leftOptions: Array<{ id: string; text: string }>;
+  matchedLeftId: string | undefined;
 };
 
-function DraggableRightItem({ option, showResults, leftOptions }: DraggableRightItemProps) {
+type DroppableLeftItemProps = {
+  leftOption: { id: string; text: string };
+  isBack: boolean;
+};
+
+function DraggableRightItem({ option, isBack, leftOptions, matchedLeftId }: DraggableRightItemProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: option.id,
+    disabled: isBack,
   });
 
   const style = {
@@ -53,10 +47,18 @@ function DraggableRightItem({ option, showResults, leftOptions }: DraggableRight
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const correctLeftOptionIndex = showResults && option.correct_match_id
-    ? leftOptions.findIndex((leftOpt) => leftOpt.id === option.correct_match_id)
-    : -1;
-  const correctPosition = correctLeftOptionIndex >= 0 ? correctLeftOptionIndex + 1 : null;
+  const isCorrectMatch = isBack && matchedLeftId && option.correct_match_id === matchedLeftId;
+  const isIncorrectMatch = isBack && matchedLeftId && option.correct_match_id !== matchedLeftId;
+  
+  const correctLeft = option.correct_match_id
+    ? leftOptions.find((leftOpt) => leftOpt.id === option.correct_match_id) ?? null
+    : null;
+
+  const borderClasses = isCorrectMatch
+    ? "border-green-500 dark:border-green-400 bg-green-50/10 dark:bg-green-950/20"
+    : isIncorrectMatch
+    ? "border-red-500 dark:border-red-400 bg-red-50/10 dark:bg-red-950/20"
+    : "border-muted";
 
   return (
     <div
@@ -64,70 +66,59 @@ function DraggableRightItem({ option, showResults, leftOptions }: DraggableRight
       style={style}
       {...attributes}
       {...listeners}
-      className={`p-3 rounded border bg-muted/50 hover:bg-muted transition-colors cursor-grab active:cursor-grabbing touch-none ${
+      className={`flex-1 p-3 rounded border bg-muted/50 hover:bg-muted transition-colors cursor-grab active:cursor-grabbing touch-none ${
         isDragging ? "z-50" : ""
-      }`}
+      } ${borderClasses}`}
     >
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center gap-3">
         <GripVertical className="h-5 w-5 text-muted-foreground shrink-0" />
-        <span className="flex-1">{option.text}</span>
-        {showResults && correctPosition !== null && (
-          <span className="text-sm font-semibold text-muted-foreground w-6 text-right">
-            {correctPosition}
-          </span>
-        )}
+        <span className="flex-1 text-sm">{option.text}</span>
       </div>
-    </div>
-  );
-}
-
-function MatchPair({
-  leftOption,
-  rightOptions,
-  matchedPairs,
-  showResults,
-  leftOptions,
-}: MatchPairProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: leftOption.id,
-  });
-
-  const matchedRightId = matchedPairs[leftOption.id];
-  const currentMatchedRight = matchedRightId
-    ? rightOptions.find((opt) => opt.id === matchedRightId) ?? null
-    : null;
-
-  const borderClasses = isOver
-    ? "border-white bg-muted"
-    : showResults && currentMatchedRight
-    ? currentMatchedRight.correct_match_id === leftOption.id
-      ? "border-green-500 dark:border-green-400 bg-green-50/10 dark:bg-green-950/20"
-      : "border-red-500 dark:border-red-400 bg-red-50/10 dark:bg-red-950/20"
-    : "border-muted bg-muted/20";
-
-  return (
-    <div ref={setNodeRef} className={`rounded-lg border-2 p-3 transition-colors ${borderClasses}`}>
-      <div className="p-3 rounded border bg-muted/50 mb-2">
-        <div className="font-medium">{leftOption.text}</div>
-      </div>
-      {currentMatchedRight ? (
-        <DraggableRightItem
-          option={currentMatchedRight}
-          showResults={showResults}
-          leftOptions={leftOptions}
-        />
-      ) : (
-        <div className="p-3 rounded border border-dashed border-muted-foreground/30 bg-muted/20">
-          <div className="text-sm text-muted-foreground italic text-center">
-            Rechts-Element hier ablegen
-          </div>
+      {isIncorrectMatch && correctLeft && (
+        <div className="text-sm text-muted-foreground mt-1">
+          ← {correctLeft.text}
         </div>
       )}
     </div>
   );
 }
 
-export function MatchQuestionCard({ question, options, onRate }: MatchQuestionCardProps) {
+function DroppableLeftItem({
+  leftOption,
+  isBack,
+}: DroppableLeftItemProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: leftOption.id,
+    disabled: isBack,
+  });
+
+  const borderClasses = isOver && !isBack
+    ? "border-white bg-muted"
+    : "border-muted";
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 p-3 rounded border bg-muted/50 transition-colors ${borderClasses}`}
+    >
+      <div className="font-medium text-sm">{leftOption.text}</div>
+    </div>
+  );
+}
+
+export function MatchQuestionCard({
+  flashcard,
+  side,
+  onStateChange,
+}: MatchQuestionCardProps) {
+  const { question } = flashcard;
+  const { options } = question;
+
+  const [matches, setMatches] = useState<Map<string, string>>(new Map()); // leftOptionId -> rightOptionId
+  const [mounted, setMounted] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const isBack = side === "back";
+
   const leftOptions = useMemo(
     () => options.filter((opt) => opt.side === "left"),
     [options],
@@ -137,32 +128,40 @@ export function MatchQuestionCard({ question, options, onRate }: MatchQuestionCa
     [options],
   );
 
-  const initialMatchedPairs = useMemo(() => {
-    return leftOptions.reduce((acc, leftOption, index) => {
-      if (rightOptions[index]) {
-        acc[leftOption.id] = rightOptions[index].id;
-      }
-      return acc;
-    }, {} as Record<string, string>);
-  }, [leftOptions, rightOptions]);
-
-  const [matchedPairs, setMatchedPairs] = useState<Record<string, string>>(initialMatchedPairs);
-  const [showResults, setShowResults] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
-
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Initialize with random matches when card changes
   useEffect(() => {
-    setMatchedPairs(initialMatchedPairs);
-  }, [initialMatchedPairs]);
-
-  useEffect(() => {
-    setShowResults(false);
+    const newMatches = new Map<string, string>();
+    const shuffledRightOptions = [...rightOptions].sort(() => Math.random() - 0.5);
+    
+    leftOptions.forEach((leftOption, index) => {
+      if (shuffledRightOptions[index]) {
+        newMatches.set(leftOption.id, shuffledRightOptions[index].id);
+      }
+    });
+    
+    setMatches(newMatches);
     setActiveId(null);
-  }, [question]);
+  }, [flashcard.question.id, leftOptions, rightOptions]);
+
+  // Report state changes (selection and correctness)
+  useEffect(() => {
+    const hasSelection = matches.size === leftOptions.length && leftOptions.length > 0;
+    
+    let isAnswerCorrect: boolean | null = null;
+    if (isBack && hasSelection) {
+      // Check if all matches are correct
+      isAnswerCorrect = Array.from(matches.entries()).every(([leftId, rightId]) => {
+        const rightOption = rightOptions.find(opt => opt.id === rightId);
+        return rightOption?.correct_match_id === leftId;
+      });
+    }
+    
+    onStateChange?.({ hasSelection, isAnswerCorrect });
+  }, [isBack, matches, leftOptions, rightOptions, onStateChange]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -174,16 +173,22 @@ export function MatchQuestionCard({ question, options, onRate }: MatchQuestionCa
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  }, []);
+    if (!isBack) {
+      setActiveId(event.active.id as string);
+    }
+  }, [isBack]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveId(null);
 
+      if (isBack || !over) {
+        return;
+      }
+
       const activeRightItem = rightOptions.find((opt) => opt.id === active.id);
-      if (!activeRightItem || !over) {
+      if (!activeRightItem) {
         return;
       }
 
@@ -192,143 +197,99 @@ export function MatchQuestionCard({ question, options, onRate }: MatchQuestionCa
         return;
       }
 
-      setMatchedPairs((prev) => {
-        const currentMatchedRightId = prev[leftItem.id];
+      setMatches((prev) => {
+        const newMatches = new Map(prev);
+        const currentMatchedRightId = newMatches.get(leftItem.id);
 
+        // If there's already a match for this left item, swap them
         if (currentMatchedRightId && currentMatchedRightId !== active.id) {
-          const leftItemForActive = Object.keys(prev).find(
-            (key) => prev[key] === active.id,
-          );
+          // Find which left item currently has the active right item
+          const leftItemForActive = Array.from(newMatches.entries()).find(
+            ([, rightId]) => rightId === active.id,
+          )?.[0];
 
           if (leftItemForActive) {
-            const newPairs = { ...prev };
-            newPairs[leftItemForActive] = currentMatchedRightId;
-            newPairs[leftItem.id] = active.id as string;
-            return newPairs;
+            // Swap: move current match to the left item that had the active item
+            newMatches.set(leftItemForActive, currentMatchedRightId);
+            newMatches.set(leftItem.id, active.id as string);
           }
-          return prev;
+        } else {
+          // Remove the active item from any previous match
+          Array.from(newMatches.entries()).forEach(([leftId, rightId]) => {
+            if (rightId === active.id) {
+              newMatches.delete(leftId);
+            }
+          });
+          // Set the new match
+          newMatches.set(leftItem.id, active.id as string);
         }
 
-        if (prev[leftItem.id] === active.id) {
-          return prev;
-        }
-
-        const newPairs = { ...prev };
-        Object.keys(newPairs).forEach((key) => {
-          if (newPairs[key] === active.id) {
-            delete newPairs[key];
-          }
-        });
-        newPairs[leftItem.id] = active.id as string;
-        return newPairs;
+        return newMatches;
       });
     },
-    [leftOptions, rightOptions],
+    [isBack, leftOptions, rightOptions],
   );
 
-  const isCorrect = showResults
-    ? leftOptions.every((leftOption) => {
-        const matchedRightId = matchedPairs[leftOption.id];
-        if (!matchedRightId) {
-          return false;
-        }
-        const matchedRight = rightOptions.find((opt) => opt.id === matchedRightId);
-        return matchedRight?.correct_match_id === leftOption.id;
-      })
-    : null;
+  if (!mounted) {
+    return (
+      <QuestionCardShell flashcard={flashcard}>
+        <div className="flex flex-col gap-2">
+          {leftOptions.map((leftOption) => (
+            <div
+              key={leftOption.id}
+              className="p-3 rounded-l border-l-4 border-r-0 border-t border-b border-l-muted bg-muted/50"
+            >
+              <div className="font-medium">{leftOption.text}</div>
+            </div>
+          ))}
+        </div>
+      </QuestionCardShell>
+    );
+  }
 
   return (
-    <QuestionCardShell question={question} isCorrect={isCorrect}>
-      <div className="mt-4 flex flex-col gap-2">
-        <div className="text-sm font-semibold">Optionen:</div>
-        {mounted ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="flex flex-col gap-4">
-              {leftOptions.map((leftOption) => (
-                <MatchPair
-                  key={leftOption.id}
+    <QuestionCardShell flashcard={flashcard}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex flex-col gap-2">
+          {leftOptions.map((leftOption) => {
+            const matchedRightId = matches.get(leftOption.id);
+            
+            return (
+              <div key={leftOption.id} className="flex items-stretch gap-2">
+                <DroppableLeftItem
                   leftOption={leftOption}
-                  rightOptions={rightOptions}
-                  matchedPairs={matchedPairs}
-                  showResults={showResults}
-                  leftOptions={leftOptions}
+                  isBack={isBack}
                 />
-              ))}
-            </div>
-            <DragOverlay>
-              {activeId ? (() => {
-                const draggedOption = rightOptions.find((opt) => opt.id === activeId);
-                const correctLeftOptionIndex = draggedOption?.correct_match_id
-                  ? leftOptions.findIndex((leftOpt) => leftOpt.id === draggedOption.correct_match_id)
-                  : -1;
-                const correctPosition = correctLeftOptionIndex >= 0 ? correctLeftOptionIndex + 1 : null;
-
-                return (
-                  <div className="flex items-center justify-center gap-3 p-3 rounded border bg-muted/50 shadow-lg opacity-90">
-                    <GripVertical className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <span className="flex-1">{draggedOption?.text}</span>
-                    {showResults && correctPosition !== null && (
-                      <span className="text-sm font-semibold text-muted-foreground w-6 text-right">
-                        {correctPosition}
-                      </span>
-                    )}
-                  </div>
-                );
-              })() : null}
-            </DragOverlay>
-          </DndContext>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {leftOptions.map((leftOption) => (
-              <div
-                key={leftOption.id}
-                className="rounded-lg border-2 border-muted bg-muted/20 p-3"
-              >
-                <div className="p-3 rounded border bg-muted/50 mb-2">
-                  <div className="font-medium">{leftOption.text}</div>
-                </div>
-                <div className="p-3 rounded border border-dashed border-muted-foreground/30 bg-muted/20">
-                  <div className="text-sm text-muted-foreground italic text-center">
-                    Rechts-Element hier ablegen
-                  </div>
-                </div>
+                {matchedRightId && (
+                  <DraggableRightItem
+                    option={rightOptions.find(opt => opt.id === matchedRightId)!}
+                    isBack={isBack}
+                    leftOptions={leftOptions}
+                    matchedLeftId={leftOption.id}
+                  />
+                )}
               </div>
-            ))}
-          </div>
-        )}
-        {!showResults ? (
-          <Button onClick={() => setShowResults(true)} className="mt-4" variant="outline">
-            Antworten prüfen
-          </Button>
-        ) : isCorrect ? (
-          <div className="mt-4 flex gap-2">
-            {([2, 3, 4] as Grade[]).map((grade) => (
-              <Button
-                key={grade}
-                variant="outline"
-                onClick={() => onRate?.(grade)}
-              >
-                {grade === 2 ? "Schwer" : grade === 3 ? "Gut" : "Einfach"}
-              </Button>
-            ))}
-          </div>
-        ) : (
-          <Button
-            onClick={() => onRate?.(1 as Grade)}
-            className="mt-4"
-            variant="outline"
-          >
-            Nächste Frage
-          </Button>
-        )}
-      </div>
+            );
+          })}
+        </div>
+        <DragOverlay>
+          {activeId ? (() => {
+            const draggedOption = rightOptions.find((opt) => opt.id === activeId);
+
+            return (
+              <div className="flex items-center gap-3 p-3 rounded border bg-muted/50 shadow-lg opacity-90">
+                <GripVertical className="h-5 w-5 text-muted-foreground shrink-0" />
+                <span className="flex-1 text-sm">{draggedOption?.text}</span>
+              </div>
+            );
+          })() : null}
+        </DragOverlay>
+      </DndContext>
     </QuestionCardShell>
   );
 }
-
-

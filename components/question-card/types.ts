@@ -1,8 +1,12 @@
-import type { Option, Question } from "@/lib/supabase/types";
-import type { Grade } from "ts-fsrs";
+import type { Flashcard } from "@/app/topics/[topic]/types";
+
+export type QuestionCardState = {
+  hasSelection: boolean;
+  isAnswerCorrect: boolean | null; // null = not checked yet, true/false = checked
+};
 
 export type QuestionCardProps = {
-  question: Question;
-  options: Option[];
-  onRate?: (rating: Grade) => void;
+  flashcard: Flashcard;
+  side: "front" | "back";
+  onStateChange?: (state: QuestionCardState) => void;
 };

@@ -1,11 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { Pool } from "./pool";
-import { Stats } from "./stats";
 import { FlashcardsDataProvider } from "./contexts";
 import { getTopicFlashcardsData } from "./utils";
-import Link from "next/link";
+import { TopicPageClient } from "./client";
 
 export default async function TopicFlashcardsPage({
   params,
@@ -33,23 +31,7 @@ export default async function TopicFlashcardsPage({
 
   return (
     <FlashcardsDataProvider topicId={topicId} initialFlashcardsData={flashcardsData}>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col">
-          <Link
-            href="/topics"
-            className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-block"
-          >
-            ← Alle Themen
-          </Link>
-          <h1 className="font-bold text-3xl mb-2">{topic.topic}</h1>
-          <p className="text-muted-foreground">
-            Lerne alle geschlossenen Wissenfragen zum Thema.
-          </p>
-        </div>
-        
-        <Stats />
-        <Pool />
-      </div>
+      <TopicPageClient topic={topic.topic} />
     </FlashcardsDataProvider>
   );
 }
