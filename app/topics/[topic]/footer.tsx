@@ -1,9 +1,15 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useState } from "react";
 import { useFlashcards } from "./hooks";
 import { Button } from "@/components/ui/button";
 import { Rating } from "ts-fsrs";
+import { MessageCircleQuestionIcon } from "lucide-react";
+import {
+  Drawer,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { RelatedPagesDrawerContent } from "./related-pages-drawer";
 
 interface TopicFooterProps {
   side: "front" | "back";
@@ -18,6 +24,7 @@ export const TopicFooter: FC<TopicFooterProps> = ({
   onReveal,
 }) => {
   const { currentFlashcard, gradeFlashcard } = useFlashcards();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   if (!currentFlashcard) {
     return null;
@@ -48,25 +55,47 @@ export const TopicFooter: FC<TopicFooterProps> = ({
 
   // Back side: show grading buttons if correct, or next card button if wrong
   if (isAnswerCorrect === true) {
+    const pages = currentFlashcard.question.learning_material_pages || [];
     return (
-      <footer className="border-t border-t-border flex-shrink-0">
-        <div className="max-w-5xl mx-auto w-full flex justify-center items-center p-2 gap-2">
-          <Button onClick={async () => await gradeFlashcard(currentFlashcard, Rating.Hard)} className="grow basis-1/3 bg-orange-500 hover:bg-orange-500/90">Schwer</Button>
-          <Button onClick={async () => await gradeFlashcard(currentFlashcard, Rating.Good)} className="grow basis-1/3 bg-green-500 hover:bg-green-500/90">Gut</Button>
-          <Button onClick={async () => await gradeFlashcard(currentFlashcard, Rating.Easy)} className="grow basis-1/3 bg-blue-500 hover:bg-blue-500/90">Einfach</Button>
-        </div>
-      </footer>
+      <>
+        <footer className="border-t border-t-border flex-shrink-0">
+          <div className="max-w-5xl mx-auto w-full flex justify-center items-center p-2 gap-2">
+            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+              <DrawerTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MessageCircleQuestionIcon />
+                </Button>
+              </DrawerTrigger>
+              <RelatedPagesDrawerContent pages={pages} />
+            </Drawer>
+            <Button onClick={async () => await gradeFlashcard(currentFlashcard, Rating.Hard)} className="grow basis-1/3 bg-orange-500 hover:bg-orange-500/90">Schwer</Button>
+            <Button onClick={async () => await gradeFlashcard(currentFlashcard, Rating.Good)} className="grow basis-1/3 bg-green-500 hover:bg-green-500/90">Gut</Button>
+            <Button onClick={async () => await gradeFlashcard(currentFlashcard, Rating.Easy)} className="grow basis-1/3 bg-blue-500 hover:bg-blue-500/90">Einfach</Button>
+          </div>
+        </footer>
+      </>
     );
   }
 
   // Wrong answer or null (shouldn't happen, but fallback): show next card button
+  const pages = currentFlashcard.question.learning_material_pages || [];
   return (
-    <footer className="border-t border-t-border flex-shrink-0">
-      <div className="max-w-5xl mx-auto w-full flex justify-center items-center p-2 gap-2">
-        <Button onClick={handleNextCard} className="grow">
-          Nächste Karte
-        </Button>
-      </div>
-    </footer>
+    <>
+      <footer className="border-t border-t-border flex-shrink-0">
+        <div className="max-w-5xl mx-auto w-full flex justify-center items-center p-2 gap-2">
+          <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+            <DrawerTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MessageCircleQuestionIcon />
+              </Button>
+            </DrawerTrigger>
+            <RelatedPagesDrawerContent pages={pages} />
+          </Drawer>
+          <Button onClick={handleNextCard} className="grow">
+            Nächste Karte
+          </Button>
+        </div>
+      </footer>
+    </>
   );
 }

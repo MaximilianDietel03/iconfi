@@ -1,16 +1,14 @@
 "use client";
 
 import { FC } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LearningMaterialPage } from "@/lib/supabase/types";
 import { Database } from "@/lib/supabase/database.types";
+import {
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 type ExternalResource = Pick<Database["public"]["Tables"]["learning_material_external_resource"]["Row"], "id" | "description" | "type" | "url">;
 
@@ -25,26 +23,33 @@ type RelatedPage = Pick<LearningMaterialPage, "id" | "key_concepts" | "number" |
   learning_material_external_resources: ExternalResource[];
 };
 
-interface RelatedPagesCardProps {
+interface RelatedPagesDrawerContentProps {
   pages: RelatedPage[];
 }
 
-export const RelatedPagesCard: FC<RelatedPagesCardProps> = ({ pages }) => {
+export const RelatedPagesDrawerContent: FC<RelatedPagesDrawerContentProps> = ({ pages }) => {
   if (!pages || pages.length === 0) {
-    return null;
+    return (
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Verwandte Seiten</DrawerTitle>
+          <DrawerDescription>
+            Keine verwandten Seiten verfügbar
+          </DrawerDescription>
+        </DrawerHeader>
+      </DrawerContent>
+    );
   }
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
-        <CardTitle className="text-lg">
-          Verwandte Seiten
-        </CardTitle>
-        <CardDescription>
+    <DrawerContent>
+      <DrawerHeader>
+        <DrawerTitle>Verwandte Seiten</DrawerTitle>
+        <DrawerDescription>
           Diese Seiten enthalten relevante Informationen zu dieser Frage
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </DrawerDescription>
+      </DrawerHeader>
+      <div className="p-4 overflow-y-auto max-h-[60vh]">
         <div className="flex flex-col gap-3">
           {pages.map((page) => {
             const url = `${page.learning_material_topic.learning_material.url}#page=${page.number}`;
@@ -58,28 +63,12 @@ export const RelatedPagesCard: FC<RelatedPagesCardProps> = ({ pages }) => {
               >
                 <div className="flex flex-col gap-2">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-sm">{page.title}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        Seite {page.number}
-                      </Badge>
-                    </div>
+                    <h4 className="font-semibold text-sm mb-1">{page.title}</h4>
                     {page.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="text-xs text-muted-foreground line-clamp-3">
                         {page.description}
                       </p>
                     )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {page.key_concepts.split(",").map((concept, index) => (
-                      <Badge
-                        key={`${page.id}-${index}`}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {concept.trim()}
-                      </Badge>
-                    ))}
                   </div>
                   {page.learning_material_external_resources && page.learning_material_external_resources.length > 0 && (
                     <div className="mt-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
@@ -98,7 +87,6 @@ export const RelatedPagesCard: FC<RelatedPagesCardProps> = ({ pages }) => {
                               }}
                               className="text-xs text-primary hover:underline flex items-center gap-1.5 text-left"
                             >
-                              <span className="font-medium">{resource.type}:</span>
                               <span>{resource.description}</span>
                               <svg
                                 className="w-3 h-3"
@@ -119,7 +107,6 @@ export const RelatedPagesCard: FC<RelatedPagesCardProps> = ({ pages }) => {
                               key={resource.id}
                               className="text-xs text-muted-foreground flex items-center gap-1.5 opacity-50"
                             >
-                              <span className="font-medium">{resource.type}:</span>
                               <span>{resource.description}</span>
                             </div>
                           )
@@ -132,8 +119,7 @@ export const RelatedPagesCard: FC<RelatedPagesCardProps> = ({ pages }) => {
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </DrawerContent>
   );
 };
-
